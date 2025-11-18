@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+env/
+.env
+.vscode/
+*.sqlite3
+.settings/
+.DS_Store
+Thumbs.db
+# add dados!!!
