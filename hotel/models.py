@@ -8,37 +8,33 @@ from typing import List
 class Pessoa:
     """
     Classe base para representar uma pessoa com dados cadastrais.
-    
-    Atributos:
-        nome (str): Nome completo.
-        documento (str): CPF ou Passaporte (único).
-        email (str): E-mail de contato.
-        telefone (str): Telefone de contato.
     """
-    pass
+    def __init__(self, nome: str, documento: str, email: str, telefone: str):
+        self.nome = nome
+        self.documento = documento
+        self.email = email
+        self.telefone = telefone
 
 
 class Hospede(Pessoa):
     """
     Representa um hóspede do hotel, herdando de Pessoa e contendo histórico de reservas.
-
-    Atributos:
-        historico_reservas (List[Reserva]): Lista de reservas associadas a este hóspede.
     """
-    pass
+    def __init__(self, nome: str, documento: str, email: str, telefone: str):
+        super().__init__(nome, documento, email, telefone)
+        self.historico_reservas: List['Reserva'] = []
 
 
 class Quarto:
     """
     Classe base que representa um quarto e define seus atributos e regras principais.
-
-    Atributos:
-        numero (int): Número único do quarto.
-        tipo (str): Categoria (SIMPLES, DUPLO, LUXO).
-        capacidade (int): Número máximo de hóspedes.
-        tarifa_base (float): Custo padrão da diária.
-        status (str): Situação atual (DISPONIVEL, OCUPADO, MANUTENCAO).
     """
+    def __init__(self, numero: int, tipo: str, capacidade: int, tarifa_base: float, status: str):
+        self.numero = numero
+        self.tipo = tipo
+        self.capacidade = capacidade
+        self.tarifa_base = tarifa_base
+        self.status = status
 
     def bloquear_quarto(self, data_inicio: date, data_fim: date, motivo: str):
         """
@@ -56,8 +52,7 @@ class Quarto:
         """
         Retorna um resumo textual do quarto (ex: "Quarto 101 (LUXO)").
         """
-        return f"Quarto {self.numero} ({self.tipo})" # Exemplo
-        pass
+        return f"Quarto {self.numero} ({self.tipo})"
     
     def __lt__(self, other: 'Quarto') -> bool:
         """
@@ -77,40 +72,35 @@ class QuartoLuxo(Quarto):
 class Pagamento:
     """
     Representa um pagamento (parcial ou total) associado a uma Reserva.
-
-    Atributos :
-        data (datetime): Data e hora do pagamento.
-        forma (str): Forma de pagamento (dinheiro, crédito, PIX).
-        valor (float): Quantia paga.
     """
-    pass
+    def __init__(self, valor: float, forma: str, data: datetime = None):
+        self.valor = valor
+        self.forma = forma
+        self.data = data or datetime.now()
 
 
 class Adicional:
     """
     Representa um consumo extra (ex.: frigobar, estacionamento) lançado na Reserva.
-
-    Atributos :
-        descricao (str): Descrição do item.
-        valor (float): Custo do item.
     """
-    pass
+    def __init__(self, descricao: str, valor: float):
+        self.descricao = descricao
+        self.valor = valor
 
 
 class Reserva:
     """
     Classe que gerencia as informações de reserva, conectando um Hóspede, um Quarto e um período de tempo.
-
-    Atributos :
-        hospede (Hospede): O hóspede responsável pela reserva.
-        quarto (Quarto): O quarto reservado.
-        data_entrada (date): Data de início da reserva.
-        data_saida (date): Data de término da reserva.
-        num_hospedes (int): Quantidade de pessoas no quarto.
-        status (str): Situação da reserva (PENDENTE, CONFIRMADA, CHECKIN, CHECKOUT, CANCELADA, NO_SHOW).
-        pagamentos (List[Pagamento]): Lista de pagamentos feitos.
-        adicionais (List[Adicional]): Lista de consumos adicionais.
     """
+    def __init__(self, hospede: Hospede, quarto: Quarto, data_entrada: date, data_saida: date, num_hospedes: int, status: str):
+        self.hospede = hospede
+        self.quarto = quarto
+        self.data_entrada = data_entrada
+        self.data_saida = data_saida
+        self.num_hospedes = num_hospedes
+        self.status = status
+        self.pagamentos: List['Pagamento'] = []
+        self.adicionais: List['Adicional'] = []
     
     def confirmar(self):
         """
@@ -118,13 +108,13 @@ class Reserva:
         """
         pass
 
-    def fazer_checkin(self):
+    def checkin(self):
         """
         Verifica se a data está correta e muda o status para CHECKIN.
         """
         pass
 
-    def fazer_checkout(self):
+    def checkout(self):
         """
         Realiza o fechamento da conta e muda o status para CHECKOUT.
         """
