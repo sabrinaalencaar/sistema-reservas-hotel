@@ -29,24 +29,42 @@ class Quarto:
     """
     Classe base que representa um quarto e define seus atributos e regras principais.
     """
-    def __init__(self, numero: int, tipo: str, capacidade: int, tarifa_base: float, status: str):
+    def __init__(self, numero: int, tipo: str, capacidade: int, tarifa_base: float, status: str = "DISPONIVEL"):
         self.numero = numero
         self.tipo = tipo
-        self.capacidade = capacidade
-        self.tarifa_base = tarifa_base
         self.status = status
+        self.definir_capacidade(capacidade)
+        self.definir_tarifa(tarifa_base)
+
+    def definir_capacidade(self, capacidade: int):
+        """
+        Validação: Deve ser um valor positivo.
+        """
+        if capacidade <= 0:
+            raise ValueError("A capacidade deve ser maior que zero.")
+        else:
+            self.capacidade = capacidade
+
+    def definir_tarifa(self, tarifa_base: float):
+        """
+        Validação: Deve ser um valor positivo.
+        """
+        if tarifa_base <= 0:
+            raise ValueError("A tarifa base deve ser maior que zero.")
+        else:
+            self.tarifa_base = tarifa_base
 
     def bloquear_quarto(self, data_inicio: date, data_fim: date, motivo: str):
         """
         Altera o status do quarto para MANUTENCAO por um período determinado.
         """
-        pass
+        self.status = "MANUTENCAO"
 
     def liberar_quarto(self):
         """
         Define o status do quarto como DISPONIVEL.
         """
-        pass
+        self.status = "DISPONIVEL"
 
     def __str__(self) -> str:
         """
@@ -58,7 +76,7 @@ class Quarto:
         """
         Permite a ordenação de quartos, por tipo ou numeração.
         """
-        pass
+        return self.numero < other.numero
 
 
 class QuartoLuxo(Quarto):
@@ -66,7 +84,9 @@ class QuartoLuxo(Quarto):
     Subclasse de Quarto, representando um quarto tipo LUXO.
     Pode sobrescrever regras de tarifa.
     """
-    pass
+    def __init__(self, numero: int, tarifa_base: float, status: str = "DISPONIVEL"):
+        tarifa_luxo = tarifa_base * 1.5
+        super().__init__(numero, "LUXO", 4, tarifa_luxo, status)
 
 
 class Pagamento:
@@ -74,9 +94,18 @@ class Pagamento:
     Representa um pagamento (parcial ou total) associado a uma Reserva.
     """
     def __init__(self, valor: float, forma: str, data: datetime = None):
-        self.valor = valor
+        self.definir_valor(valor)
         self.forma = forma
         self.data = data or datetime.now()
+
+    def definir_valor(self, valor: float):
+        """
+        Validação: Deve ser um valor positivo.
+        """
+        if valor <= 0:
+            raise ValueError("O valor do pagamento deve ser maior que zero.")
+        else:
+            self.valor = valor
 
 
 class Adicional:
@@ -85,61 +114,116 @@ class Adicional:
     """
     def __init__(self, descricao: str, valor: float):
         self.descricao = descricao
-        self.valor = valor
+        self.definir_valor(valor)
+
+    def definir_valor(self, valor: float):
+        """
+        Validação: Deve ser um valor positivo.
+        """
+        if valor <= 0:
+            raise ValueError("O valor do adicional deve ser maior que zero.")
+        else:
+            self.valor = valor
 
 
 class Reserva:
     """
     Classe que gerencia as informações de reserva, conectando um Hóspede, um Quarto e um período de tempo.
     """
-    def __init__(self, hospede: Hospede, quarto: Quarto, data_entrada: date, data_saida: date, num_hospedes: int, status: str):
+    def __init__(self, hospede: Hospede, quarto: Quarto, data_entrada: date, data_saida: date, num_hospedes: int, status: str = "PENDENTE"):
         self.hospede = hospede
         self.quarto = quarto
         self.data_entrada = data_entrada
-        self.data_saida = data_saida
-        self.num_hospedes = num_hospedes
+        self.definir_data_saida(data_saida)
+        self.definir_num_hospedes(num_hospedes)
         self.status = status
         self.pagamentos: List['Pagamento'] = []
         self.adicionais: List['Adicional'] = []
+    
+    def definir_data_saida(self, data_saida: date):
+        """
+        Validação: Deve ser posterior à data de entrada.
+        """
+        if data_saida < self.data_entrada:
+            raise ValueError("A data de saída deve ser posterior à data de entrada.")
+        else:
+            self.data_saida = data_saida
+    
+    def definir_num_hospedes(self, num_hospedes: int):
+        """
+        Validação: Deve ser um valor positivo e não exceder a capacidade do quarto.
+        """
+        if num_hospedes <= 0:
+            raise ValueError("O número de hóspedes deve ser maior que zero.")
+        elif num_hospedes > self.quarto.capacidade:
+            raise ValueError("O número de hóspedes excede a capacidade do quarto.")
+        else:
+            self.num_hospedes = num_hospedes
     
     def confirmar(self):
         """
         Muda o status da reserva para CONFIRMADA.
         """
-        pass
+        if self.status == "PENDENTE":
+            self.status = "CONFIRMADA"
+            return True
+        else: 
+            return False
 
     def checkin(self):
         """
         Verifica se a data está correta e muda o status para CHECKIN.
         """
-        pass
+        if self.status == "CONFIRMADA" and date.today() >= self.data_entrada and date.today() <= self.data_saida:
+            self.status = "CHECKIN"
+            self.quarto.status = "OCUPADO"
+            return True
+        else: 
+            return False
 
     def checkout(self):
         """
         Realiza o fechamento da conta e muda o status para CHECKOUT.
         """
-        pass
+        if self.status == "CHECKIN":
+            self.status = "CHECKOUT"
+            self.quarto.liberar_quarto()
+            return True
+        else: 
+            return False
 
     def cancelar(self):
         """
         Cancela a reserva e verifica regras de multa.
         """
-        pass
+        if self.status in ["PENDENTE", "CONFIRMADA"]:
+            self.status = "CANCELADA"
+            self.quarto.liberar_quarto()
+            return True
+        else: 
+            return False
 
     def calcular_total(self) -> float:
         """
         Calcula o valor total da reserva com base nas diárias, ajustes de temporada e adicionais.
         """
-        pass
+        total_diarias = self.quarto.tarifa_base * len(self)
+        total_adicionais = sum(adicional.valor for adicional in self.adicionais)
+        return total_diarias + total_adicionais
 
     def __len__(self) -> int:
         """
-        Retorna o número de diárias (noites) da reserva.
+        Retorna o número de diárias da reserva.
         """
-        pass
+        delta = self.data_saida - self.data_entrada
+        return delta.days
 
     def __eq__(self, other: 'Reserva') -> bool:
         """
         Verifica se duas reservas são idênticas (mesmo quarto e intervalo de datas que se sobrepõem).
         """
-        pass
+        if not isinstance(other, Reserva):
+            return False
+        return (self.quarto.numero == other.quarto.numero and
+                self.data_entrada == other.data_entrada and
+                self.data_saida == other.data_saida)
