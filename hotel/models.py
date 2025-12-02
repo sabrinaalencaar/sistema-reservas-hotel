@@ -24,6 +24,29 @@ class Hospede(Pessoa):
         super().__init__(nome, documento, email, telefone)
         self.historico_reservas: List['Reserva'] = []
 
+    def to_dict(self):
+        """
+        Converte os dados cadastrais do hóspede para dicionário.
+        """
+        return {
+            "nome": self.nome,
+            "documento": self.documento,
+            "email": self.email,
+            "telefone": self.telefone
+        }
+
+    @classmethod
+    def from_dict(cls, dados):
+        """
+        Cria um objeto Hospede a partir dos dados salvos.
+        """
+        return cls(
+            nome = dados["nome"],
+            documento = dados["documento"],
+            email = dados["email"],
+            telefone = dados["telefone"]
+        )
+
 
 class Quarto:
     """
@@ -78,6 +101,31 @@ class Quarto:
         """
         return self.numero < other.numero
 
+    def to_dict(self):
+        """
+        Converte os dados do quarto para um dicionário.
+        """
+        return {
+            "numero": self.numero,
+            "tipo": self.tipo,
+            "capacidade": self.capacidade,
+            "tarifa_base": self.tarifa_base,
+            "status": self.status
+        }
+
+    @classmethod
+    def from_dict(cls, dados):
+        """
+        Cria um objeto Quarto a partir dos dados salvos.
+        """
+        return cls(
+            numero = dados["numero"],
+            tipo = dados["tipo"],
+            capacidade = dados["capacidade"],
+            tarifa_base = dados["tarifa_base"],
+            status = dados["status"]
+        )
+
 
 class QuartoLuxo(Quarto):
     """
@@ -107,6 +155,27 @@ class Pagamento:
         else:
             self.valor = valor
 
+    def to_dict(self):
+        """
+        Converte o pagamento para dicionário, transformando a data em texto.
+        """
+        return {
+            "valor": self.valor,
+            "forma": self.forma,
+            "data": self.data.isoformat() # Convertemos data para texto
+        }
+
+    @classmethod
+    def from_dict(cls, dados):
+        """
+        Recupera o pagamento, convertendo o texto da data de volta para datetime.
+        """
+        return cls(
+            valor = dados["valor"],
+            forma = dados["forma"],
+            data = datetime.fromisoformat(dados["data"]) # Convertemos texto para data
+        )
+
 
 class Adicional:
     """
@@ -124,6 +193,25 @@ class Adicional:
             raise ValueError("O valor do adicional deve ser maior que zero.")
         else:
             self.valor = valor
+
+    def to_dict(self):
+        """
+        Converte o item adicional para um dicionário simples.
+        """
+        return {
+            "descricao": self.descricao,
+            "valor": self.valor
+        }
+
+    @classmethod
+    def from_dict(cls, dados):
+        """
+        Reconstroi o objeto Adicional a partir dos dados do dicionário.
+        """
+        return cls(
+            descricao = dados["descricao"],
+            valor = dados["valor"]
+        )
 
 
 class Reserva:
@@ -227,3 +315,18 @@ class Reserva:
         return (self.quarto.numero == other.quarto.numero and
                 self.data_entrada == other.data_entrada and
                 self.data_saida == other.data_saida)
+    
+    def to_dict(self):
+        """
+        Converte a reserva em dicionário, salvando apenas os identificadores (IDs) do hóspede e do quarto, e convertendo datas para texto.
+        """
+        return {
+            "hospede_doc": self.hospede.documento,
+            "quarto_num": self.quarto.numero,
+            "data_entrada": self.data_entrada.isoformat(),
+            "data_saida": self.data_saida.isoformat(),
+            "num_hospedes": self.num_hospedes,
+            "status": self.status,
+            "pagamentos": [p.to_dict() for p in self.pagamentos],
+            "adicionais": [a.to_dict() for a in self.adicionais]
+        }

@@ -3,6 +3,7 @@ Implementa as regras de negócio e operações principais do Sistema de Reservas
 """
 
 from .models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicional, Reserva
+from hotel.data import salvar_dados, carregar_dados
 from datetime import datetime, date
 from typing import List, Optional
 
@@ -160,3 +161,19 @@ def registrar_adicional(doc_hospede: str, num_quarto: int, descricao: str, valor
     adicional = Adicional(descricao, valor)
     reserva.adicionais.append(adicional)
     print(f"Adicional '{descricao}' (R${valor}) adicionado à conta com sucesso!")
+
+
+# PERSISTÊNCIA DE DADOS:
+
+def inicializar_sistema():
+    """
+    Carrega os dados salvos ao iniciar o sistema.
+    """
+    global quartos_db, hospedes_db, reservas_db
+    quartos_db, hospedes_db, reservas_db = carregar_dados()
+
+def salvar_tudo():
+    """
+    Salva o estado atual das listas nos arquivos JSON.
+    """
+    salvar_dados(quartos_db, hospedes_db, reservas_db)

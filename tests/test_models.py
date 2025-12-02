@@ -3,7 +3,7 @@ Conjunto de testes para verificação de comportamento, encapsulamento e lógica
 """
 
 from hotel.models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicional, Reserva
-from datetime import date
+from datetime import date, timedelta
 import pytest
 
 
@@ -137,7 +137,7 @@ def test_reserva_checkin_checkout():
     hospede = Hospede("Jayr Alencar", "12345678900", "jayr.alencar@gmail.com", "(88) 12345-6789")
     quarto = Quarto(101, "SIMPLES", 2, 100.0, "DISPONIVEL")
     data_entrada = date.today()
-    data_saida = date(data_entrada.year, data_entrada.month, data_entrada.day + 3)
+    data_saida = data_entrada + timedelta(days=3)
     num_hospedes = 1
     reserva = Reserva(hospede, quarto, data_entrada, data_saida, num_hospedes)
     assert reserva.confirmar() is True
