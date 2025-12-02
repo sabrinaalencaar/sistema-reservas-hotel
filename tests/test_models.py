@@ -1,9 +1,13 @@
-import pytest
-from datetime import date
+"""
+Conjunto de testes para verificação de comportamento, encapsulamento e lógica das classes.
+"""
+
 from hotel.models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicional, Reserva
+from datetime import date, timedelta
+import pytest
 
 
-"""Testes para as classes Pessoa e Hospede:"""
+# TESTES DE PESSOA E HÓSPEDE:
 
 def test_criar_pessoa():
     pessoa = Pessoa("Jayr Alencar", "12345678900", "jayr.alencar@gmail.com", "(88) 12345-6789")
@@ -17,7 +21,7 @@ def test_historico_reservas_hospede():
     assert hospede.historico_reservas == []
 
 
-"""Testes para as classes Quarto e QuartoLuxo:"""
+# TESTES DE QUARTO E QUARTO DE LUXO:
 
 def test_quarto_valido():
     quarto = Quarto(101, "SIMPLES", 1, 100.0, "DISPONIVEL")
@@ -63,7 +67,7 @@ def test_quarto_luxo_tarifa():
     assert quarto_luxo.tarifa_base == 300.0
 
 
-"""Testes para as classes Pagamento e Adicional:"""
+# TESTES DE PAGAMENTO E ADICIONAL:
 
 def test_pagamento_valido():
     pagamento = Pagamento(250.0, "CARTAO")
@@ -84,7 +88,7 @@ def test_adicional_valor_invalido():
         Adicional("Refrigerante Lata", 0.0)
 
 
-"""Testes para a classe Reserva:"""
+# TESTES DE RESERVA:
 
 def test_reserva_valida():
     hospede = Hospede("Jayr Alencar", "12345678900", "jayr.alencar@gmail.com", "(88) 12345-6789")
@@ -133,7 +137,7 @@ def test_reserva_checkin_checkout():
     hospede = Hospede("Jayr Alencar", "12345678900", "jayr.alencar@gmail.com", "(88) 12345-6789")
     quarto = Quarto(101, "SIMPLES", 2, 100.0, "DISPONIVEL")
     data_entrada = date.today()
-    data_saida = date(data_entrada.year, data_entrada.month, data_entrada.day + 3)
+    data_saida = data_entrada + timedelta(days=3)
     num_hospedes = 1
     reserva = Reserva(hospede, quarto, data_entrada, data_saida, num_hospedes)
     assert reserva.confirmar() is True
