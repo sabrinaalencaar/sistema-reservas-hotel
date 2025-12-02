@@ -177,3 +177,35 @@ def salvar_tudo():
     Salva o estado atual das listas nos arquivos JSON.
     """
     salvar_dados(quartos_db, hospedes_db, reservas_db)
+
+
+# RELATÓRIOS E ESTATÍSTICAS:
+
+def gerar_relatorio_ocupacao():
+    """
+    Gera um relatório simples da taxa de ocupação atual do hotel.
+    """
+    total_quartos = len(quartos_db)
+    
+    if total_quartos == 0:
+        print("Relatório indisponível: Nenhum quarto cadastrado.")
+        return
+
+    quartos_ocupados = 0
+    for quarto in quartos_db:
+        if quarto.status == "OCUPADO":
+            quartos_ocupados += 1
+            
+    taxa = (quartos_ocupados / total_quartos) * 100
+    
+    print("\n" + "="*30)
+    print(f"RELATÓRIO DE OCUPAÇÃO")
+    print("="*30)
+    print(f"Total de Quartos:   {total_quartos}")
+    print(f"Quartos Ocupados:   {quartos_ocupados}")
+    print(f"Quartos Livres:     {total_quartos - quartos_ocupados}")
+    print("-" * 30)
+    print(f"Taxa de Ocupação:   {taxa:.2f}%")
+    print("="*30 + "\n")
+    
+    return taxa
