@@ -1,0 +1,47 @@
+{
+    "hotel": {
+        "nome": "Cariri PyHotel",
+        "endereco": "Av. Ten. Raimundo Rocha, 1639 - Cidade Universitária, Juazeiro do Norte - CE",
+        "telefone": "+55 (88) 4002-8922",
+        "horarios": {
+            "checkin": "14:00",
+            "checkout": "12:00",
+            "tolerancia_noshow_minutos": 60,
+            "hora_extra_valor": 50.00
+        }
+    },
+    "financeiro": {
+        "taxa_servico": 0.10,
+        "multiplicador_fim_de_semana": 1.1
+    },
+    "politica_cancelamento": {
+        "multa_padrao": 0.20,
+        "multa_noshow": 1.00
+    },
+    "temporadas": [
+        {
+            "nome": "Alta Temporada (Fim de Ano)",
+            "inicio": "20-12",
+            "fim": "05-01",
+            "multiplicador": 1.5
+        },
+        {
+            "nome": "Carnaval",
+            "inicio": "01-02",
+            "fim": "20-02",
+            "multiplicador": 1.4
+        },
+        {
+            "nome": "Férias de Julho",
+            "inicio": "01-07",
+            "fim": "31-07",
+            "multiplicador": 1.2
+        },
+        {
+            "nome": "Baixa Temporada (Promoção)",
+            "inicio": "01-05",
+            "fim": "30-05",
+            "multiplicador": 0.80
+        }
+    ]
+}
