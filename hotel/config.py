@@ -59,6 +59,16 @@ def get_multiplicador_fim_de_semana() -> float:
 
 # GETTERS POLÍTICA DE CANCELAMENTO
 
+def get_politica_cancelamento() -> dict:
+    """
+    Retorna o dicionário de política de cancelamento.
+    """
+    return regras.get("politica_cancelamento", {
+        "multa_padrao": 0.20,
+        "multa_noshow": 1.0,
+        "horas_limite_sem_multa": 24
+    })
+
 def get_multa_padrao() -> float:
     """
     Retorna a multa padrão de cancelamento.

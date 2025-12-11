@@ -1,0 +1,9 @@
+[
+    {
+        "numero": 101,
+        "tipo": "SIMPLES",
+        "capacidade": 1,
+        "tarifa_base": 100.0,
+        "status": "DISPONIVEL"
+    }
+]
