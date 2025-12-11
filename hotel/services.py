@@ -4,7 +4,8 @@ Implementa as regras de negócio e operações principais do Sistema de Reservas
 
 from .models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicional, Reserva
 from hotel.data import salvar_dados, carregar_dados
-from datetime import datetime, date
+from hotel import config
+from datetime import datetime, date, timedelta
 from typing import List, Optional
 
 
@@ -86,8 +87,118 @@ def realizar_reserva(doc_hospede: str, num_quarto: int, data_entrada: date, data
     reservas_db.append(nova_reserva)
     hospede.historico_reservas.append(nova_reserva)
     
-    print(f"Reserva criada com sucesso! {hospede.nome} vai ficar no Quarto {quarto.numero}.")
+    print(f"Reserva criada com sucesso! {hospede.nome} ficará no Quarto {quarto.numero}.")
     return nova_reserva
+
+def cancelar_reserva(doc_hospede: str, num_quarto: int):
+    """
+    Cancela uma reserva e aplica multa se estiver fora do prazo.
+    """
+    reserva = buscar_reserva(doc_hospede, num_quarto)
+    
+    if not reserva:
+        raise ValueError("Reserva não encontrada.")
+    
+    if reserva.status not in ["PENDENTE", "CONFIRMADA"]:
+        raise ValueError(f"Não é possível cancelar reserva com status {reserva.status}.")
+
+    politica = config.get_politica_cancelamento()
+    horas_limite = politica.get("horas_limite_sem_multa", 24)
+    multa_pct = politica.get("multa_padrao", 0.0)
+
+    agora = datetime.now()
+    data_checkin = datetime.combine(reserva.data_entrada, datetime.min.time()) 
+    data_checkin = data_checkin.replace(hour=14)
+
+    diferenca = data_checkin - agora
+    horas_antecedencia = diferenca.total_seconds() / 3600
+
+    print(f"Antecedência do cancelamento: {horas_antecedencia:.1f} horas.")
+
+    if horas_antecedencia < horas_limite:
+        valor_total = calcular_total_reserva(reserva)
+        valor_multa = valor_total * multa_pct
+        
+        multa_obj = Adicional(f"Multa Cancelamento (<{horas_limite}h)", valor_multa)
+        reserva.adicionais.append(multa_obj)
+        
+        print(f"Multa aplicada: R$ {valor_multa:.2f} ({multa_pct*100}% do total).")
+    else:
+        print("Cancelamento dentro do prazo. Sem multa.")
+
+    reserva.cancelar()
+    print("Reserva cancelada com sucesso e quarto liberado.")
+
+def realizar_noshow(doc_hospede: str, num_quarto: int):
+    """
+    Registra o não-comparecimento, aplica multa total e cancela a reserva.
+    """
+    reserva = buscar_reserva(doc_hospede, num_quarto)
+    
+    if not reserva:
+        raise ValueError("Reserva não encontrada.")
+    
+    if reserva.status != "CONFIRMADA":
+        raise ValueError(f"Apenas reservas CONFIRMADAS podem sofrer No-Show. Status atual: {reserva.status}")
+
+    horarios = config.get_horarios()
+    tolerancia_min = horarios.get("tolerancia_noshow_minutos", 60)
+    
+    data_limite = datetime.combine(reserva.data_entrada, datetime.min.time())
+    data_limite = data_limite.replace(hour=14) + timedelta(minutes=tolerancia_min)
+    
+    agora = datetime.now()
+    
+    if agora < data_limite:
+        print(f"Atenção: Ainda está dentro do prazo de tolerância (Limite: {data_limite}).")
+        confirmacao = input("Deseja registrar o No-Show mesmo assim? (S/N): ")
+        if confirmacao.upper() != 'S':
+            return
+
+    multa_pct = config.get_multa_noshow()
+    valor_total = calcular_total_reserva(reserva)
+    valor_multa = valor_total * multa_pct
+    
+    reserva.adicionais.append(Adicional("Multa NO-SHOW", valor_multa))
+    reserva.status = "NO_SHOW"
+    reserva.quarto.liberar_quarto()
+    
+    print(f"No-Show registrado para {reserva.hospede.nome}.")
+    print(f"Multa aplicada: R$ {valor_multa:.2f}")
+
+
+# CÁLCULO DE VALORES E TARIFAS:
+
+def calcular_total_reserva(reserva: Reserva) -> float:
+    """
+    Calcula o valor final da reserva percorrendo dia a dia e aplicando
+    as regras de temporada e fim de semana.
+    Soma também os adicionais e aplica a taxa de serviço.
+    """
+    total_diarias = 0.0
+    dia_atual = reserva.data_entrada
+    
+    # LOOP: Percorre do dia da entrada até o dia da saída
+    while dia_atual < reserva.data_saida:
+        # Usa a função que já criamos para saber o preço daquele dia específico
+        valor_do_dia = calcular_valor_diaria(dia_atual, reserva.quarto.tarifa_base)
+        total_diarias += valor_do_dia
+        
+        # Avança para o próximo dia
+        dia_atual += timedelta(days=1)
+    
+    # Soma os consumos extras
+    total_adicionais = sum(item.valor for item in reserva.adicionais)
+    
+    subtotal = total_diarias + total_adicionais
+    
+    # Aplica Taxa de Serviço (ex: 10%) definida no settings.json
+    taxa_servico_pct = config.get_taxa_servico() # ex: 0.10
+    valor_taxa = subtotal * taxa_servico_pct
+    
+    total_final = subtotal + valor_taxa
+    
+    return total_final
 
 
 # FLUXO DA ESTADIA (CHECK-IN / CHECK-OUT):
@@ -124,8 +235,12 @@ def realizar_checkout(doc_hospede: str, num_quarto: int):
     if not reserva:
         raise ValueError("Reserva não encontrada para este hóspede/quarto.")
     
-    total_conta = reserva.calcular_total()
+    total_conta = calcular_total_reserva(reserva)
     total_pago = sum(p.valor for p in reserva.pagamentos)
+    
+    print(f"\n--- FECHAMENTO DE CONTA ---")
+    print(f"Total da Hospedagem: R$ {total_conta:.2f}")
+    print(f"Total Pago:          R$ {total_pago:.2f}")
     
     if total_pago < total_conta:
         raise ValueError(f"Conta pendente! Total: R${total_conta}, Pago: R${total_pago}. Faltam R${total_conta - total_pago}")
@@ -209,3 +324,45 @@ def gerar_relatorio_ocupacao():
     print("="*30 + "\n")
     
     return taxa
+
+
+# CÁLCULO DE TARIFAS
+
+def _verificar_temporada(data: date) -> float:
+    """
+    Verifica se a data cai em alguma temporada e retorna o multiplicador.
+    """
+    temporadas = config.get_temporadas()
+    
+    for temp in temporadas:
+        inicio_str = temp["inicio"]
+        fim_str = temp["fim"]
+        
+        ano_atual = data.year
+        
+        d_inicio = datetime.strptime(f"{inicio_str}-{ano_atual}", "%d-%m-%Y").date()
+        d_fim = datetime.strptime(f"{fim_str}-{ano_atual}", "%d-%m-%Y").date()
+        
+        if d_inicio > d_fim:  # Temporada que cruza o ano novo
+            if data < d_inicio: 
+                d_inicio = d_inicio.replace(year=ano_atual - 1)
+            else:
+                d_fim = d_fim.replace(year=ano_atual + 1)
+
+        if d_inicio <= data <= d_fim:
+            return temp["multiplicador"]
+            
+    return 1.0 # Tarifa normal
+
+def calcular_valor_diaria(data: date, tarifa_base: float) -> float:
+    """
+    Calcula o preço de UMA diária específica aplicando as regras.
+    """
+    mult_temp = _verificar_temporada(data)
+    mult_fds = 1.0
+    
+    if data.weekday() >= 5:
+        mult_fds = config.get_multiplicador_fim_de_semana()
+        
+    valor_final = tarifa_base * mult_temp * mult_fds
+    return valor_final
