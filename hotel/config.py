@@ -10,6 +10,14 @@ ARQUIVO_SETTINGS = "settings.json"
 
 regras = {}
 
+class Cores:
+    VERDE = '\033[92m'
+    VERMELHO = '\033[91m'
+    AMARELO = '\033[93m'
+    AZUL = '\033[94m'
+    RESET = '\033[0m'
+    NEGRITO = '\033[1m'
+
 def carregar_configuracoes():
     """
     Lê o arquivo settings.json e carrega as regras para a memória.
@@ -22,9 +30,9 @@ def carregar_configuracoes():
     try:
         with open(ARQUIVO_SETTINGS, "r", encoding="utf-8") as f:
             regras = json.load(f)
-            print("Configurações carregadas com sucesso!")
+            print(f"{Cores.VERDE}Configurações carregadas com sucesso!{Cores.RESET}")
     except Exception as e:
-        print(f"Erro ao ler configurações: {e}")
+        print(f"{Cores.VERMELHO}Erro ao ler configurações: {e}{Cores.RESET}")
 
 
 # GETTERS HOTEL

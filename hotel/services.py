@@ -7,6 +7,8 @@ from hotel.data import salvar_dados, carregar_dados
 from hotel import config
 from datetime import datetime, date, timedelta
 from typing import List, Optional
+from .config import Cores
+from time import sleep
 
 
 # PERSISTÊNCIA TEMPORÁRIA EM MEMÓRIA: 
@@ -44,12 +46,11 @@ def cadastrar_quarto(numero: int, tipo: str, capacidade: int, tarifa_base: float
     Verifica se o quarto já existe e o cadastra se não existir.
     """
     if buscar_quarto(numero):
-        raise ValueError(f"Erro: Já existe um quarto cadastrado com o número {numero}.")
+        raise ValueError(f"{Cores.VERMELHO}Erro: Já existe um quarto cadastrado com o número {numero}.{Cores.RESET}")
     
     novo_quarto = Quarto(numero, tipo, capacidade, tarifa_base)
     
     quartos_db.append(novo_quarto)
-    print(f"Quarto {numero} cadastrado com sucesso!")
     return novo_quarto
 
 def cadastrar_hospede(nome: str, documento: str, email: str, telefone: str) -> Hospede:
@@ -57,15 +58,24 @@ def cadastrar_hospede(nome: str, documento: str, email: str, telefone: str) -> H
     Verifica se o hóspede já existe e o cadastra se não existir.
     """
     if buscar_hospede(documento):
-        raise ValueError(f"Erro: Hóspede com documento {documento} já está cadastrado.")
+        raise ValueError(f"{Cores.VERMELHO}Erro: Hóspede com documento {documento} já está cadastrado.{Cores.RESET}")
         
     novo_hospede = Hospede(nome, documento, email, telefone)
     hospedes_db.append(novo_hospede)
-    print(f"Hóspede {nome} cadastrado com sucesso!")
     return novo_hospede
 
 
 # GESTÃO DE RESERVAS:
+
+def _verificar_disponibilidade(numero_quarto: int, data_inicio: date, data_fim: date) -> bool:
+    """
+    Verifica se o quarto está livre no período solicitado.
+    """
+    for r in reservas_db:
+        if r.quarto.numero == numero_quarto and r.status != "CANCELADA":
+            if data_inicio < r.data_saida and data_fim > r.data_entrada:
+                return False
+    return True
 
 def realizar_reserva(doc_hospede: str, num_quarto: int, data_entrada: date, data_saida: date, num_hospedes: int) -> Reserva:
     """
@@ -75,20 +85,40 @@ def realizar_reserva(doc_hospede: str, num_quarto: int, data_entrada: date, data
     quarto = buscar_quarto(num_quarto)
     
     if not hospede:
-        raise ValueError("Erro: Hóspede não encontrado. Cadastre-o antes.")
+        raise ValueError(f"{Cores.VERMELHO}Erro: Hóspede não encontrado. Cadastre-o antes.{Cores.RESET}")
     if not quarto:
-        raise ValueError("Erro: Quarto não encontrado.")
-    
-    if quarto.status != "DISPONIVEL":
-        raise ValueError(f"Erro: O Quarto {num_quarto} não está disponível no momento (Status: {quarto.status}).")
+        raise ValueError(f"{Cores.VERMELHO}Erro: Quarto não encontrado.{Cores.RESET}")
 
+    if not _verificar_disponibilidade(num_quarto, data_entrada, data_saida):
+        raise ValueError(f"{Cores.VERMELHO}O Quarto {num_quarto} já está ocupado neste período!{Cores.RESET}")
+
+    if num_hospedes > quarto.capacidade:
+        raise ValueError(f"{Cores.VERMELHO}Capacidade excedida. O quarto comporta {quarto.capacidade} pessoas.{Cores.RESET}")
+    
     nova_reserva = Reserva(hospede, quarto, data_entrada, data_saida, num_hospedes)
     
     reservas_db.append(nova_reserva)
     hospede.historico_reservas.append(nova_reserva)
     
-    print(f"Reserva criada com sucesso! {hospede.nome} ficará no Quarto {quarto.numero}.")
     return nova_reserva
+
+def confirmar_reserva(doc_hospede: str, num_quarto: int):
+    """
+    Busca uma reserva PENDENTE e muda para CONFIRMADA.
+    """
+    reserva = buscar_reserva(doc_hospede, num_quarto)
+    
+    if not reserva:
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada.{Cores.RESET}")
+
+    if reserva.status != "PENDENTE":
+        raise ValueError(f"{Cores.VERMELHO}Apenas reservas PENDENTES podem ser confirmadas. Status atual: {reserva.status}{Cores.RESET}")
+
+    if reserva.confirmar():
+        salvar_tudo()
+        print(f"{Cores.VERDE}Reserva confirmada com sucesso para {reserva.hospede.nome}!{Cores.RESET}")
+    else:
+        raise ValueError(f"{Cores.VERMELHO}Não foi possível confirmar a reserva.{Cores.RESET}")
 
 def cancelar_reserva(doc_hospede: str, num_quarto: int):
     """
@@ -97,10 +127,10 @@ def cancelar_reserva(doc_hospede: str, num_quarto: int):
     reserva = buscar_reserva(doc_hospede, num_quarto)
     
     if not reserva:
-        raise ValueError("Reserva não encontrada.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada.{Cores.RESET}")
     
     if reserva.status not in ["PENDENTE", "CONFIRMADA"]:
-        raise ValueError(f"Não é possível cancelar reserva com status {reserva.status}.")
+        raise ValueError(f"{Cores.VERMELHO}Não é possível cancelar reserva com status {reserva.status}.{Cores.RESET}")
 
     politica = config.get_politica_cancelamento()
     horas_limite = politica.get("horas_limite_sem_multa", 24)
@@ -127,7 +157,7 @@ def cancelar_reserva(doc_hospede: str, num_quarto: int):
         print("Cancelamento dentro do prazo. Sem multa.")
 
     reserva.cancelar()
-    print("Reserva cancelada com sucesso e quarto liberado.")
+    print(f"{Cores.VERDE}Reserva cancelada com sucesso e quarto liberado.{Cores.RESET}")
 
 def realizar_noshow(doc_hospede: str, num_quarto: int):
     """
@@ -136,10 +166,10 @@ def realizar_noshow(doc_hospede: str, num_quarto: int):
     reserva = buscar_reserva(doc_hospede, num_quarto)
     
     if not reserva:
-        raise ValueError("Reserva não encontrada.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada.{Cores.RESET}")
     
     if reserva.status != "CONFIRMADA":
-        raise ValueError(f"Apenas reservas CONFIRMADAS podem sofrer No-Show. Status atual: {reserva.status}")
+        raise ValueError(f"{Cores.VERMELHO}Apenas reservas CONFIRMADAS podem sofrer No-Show. Status atual: {reserva.status}.{Cores.RESET}")
 
     horarios = config.get_horarios()
     tolerancia_min = horarios.get("tolerancia_noshow_minutos", 60)
@@ -214,26 +244,30 @@ def buscar_reserva(hospede_doc: str, quarto_num: int) -> Optional[Reserva]:
 
 def realizar_checkin(doc_hospede: str, num_quarto: int):
     """
-    Busca a reserva e tenta fazer o check-in.
+    Busca a reserva e tenta fazer o check-in, atualizando o status do quarto.
     """
     reserva = buscar_reserva(doc_hospede, num_quarto)
     
     if not reserva:
-        raise ValueError("Reserva não encontrada para este hóspede/quarto.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada para este hóspede/quarto.{Cores.RESET}")
     
     if reserva.checkin():
-        print(f"Check-in realizado com sucesso para {reserva.hospede.nome}!")
+        quarto_real = buscar_quarto(num_quarto)
+        if quarto_real:
+            quarto_real.status = "OCUPADO"
+        
+        salvar_tudo()
     else:
-        raise ValueError("Não foi possível realizar o check-in, verifique datas ou status.")
+        raise ValueError(f"{Cores.VERMELHO}Não foi possível realizar o check-in (Verifique se a reserva está CONFIRMADA).{Cores.RESET}")
 
 def realizar_checkout(doc_hospede: str, num_quarto: int):
     """
-    Busca a reserva, calcula total e tenta fazer o check-out.
+    Busca a reserva, calcula total, verifica pagamento e libera o quarto.
     """
     reserva = buscar_reserva(doc_hospede, num_quarto)
     
     if not reserva:
-        raise ValueError("Reserva não encontrada para este hóspede/quarto.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada para este hóspede/quarto.{Cores.RESET}")
     
     total_conta = calcular_total_reserva(reserva)
     total_pago = sum(p.valor for p in reserva.pagamentos)
@@ -242,40 +276,49 @@ def realizar_checkout(doc_hospede: str, num_quarto: int):
     print(f"Total da Hospedagem: R$ {total_conta:.2f}")
     print(f"Total Pago:          R$ {total_pago:.2f}")
     
-    if total_pago < total_conta:
-        raise ValueError(f"Conta pendente! Total: R${total_conta}, Pago: R${total_pago}. Faltam R${total_conta - total_pago}")
+    if total_pago < (total_conta - 0.01):
+        faltando = total_conta - total_pago
+        raise ValueError(f"{Cores.VERMELHO}Conta pendente! Faltam R$ {faltando:.2f} para liberar a saída.{Cores.RESET}")
     
     if reserva.checkout():
-        print(f"Check-out realizado com sucesso! Quarto {num_quarto} liberado.")
+        quarto_real = buscar_quarto(num_quarto)
+        if quarto_real:
+            quarto_real.status = "DISPONIVEL"
+            
+        salvar_tudo()
+        
+        print(f"{Cores.VERDE}Check-out realizado com sucesso! Quarto {num_quarto} liberado.{Cores.RESET}")
     else:
-        raise ValueError("Não foi possível realizar o check-out.")
+        raise ValueError(f"{Cores.VERMELHO}Não foi possível realizar o check-out.{Cores.RESET}")
 
 
 # TRANSAÇÕES FINANCEIRAS:
 
 def registrar_pagamento(doc_hospede: str, num_quarto: int, valor: float, forma: str):
     """
-    Registra um pagamento para a reserva especificada.
+    Registra um pagamento para a reserva especificada e salva no banco.
     """
     reserva = buscar_reserva(doc_hospede, num_quarto)
     if not reserva:
-        raise ValueError("Reserva não encontrada.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada.{Cores.RESET}")
         
     pagamento = Pagamento(valor, forma)
     reserva.pagamentos.append(pagamento)
-    print(f"Pagamento no valor de R${valor} ({forma}) registrado com sucesso!")
+    
+    salvar_tudo() 
 
 def registrar_adicional(doc_hospede: str, num_quarto: int, descricao: str, valor: float):
     """
-    Lança um consumo extra (frigobar, estacionamento) na conta da reserva.
+    Lança um consumo extra e salva no banco.
     """
     reserva = buscar_reserva(doc_hospede, num_quarto)
     if not reserva:
-        raise ValueError("Reserva não encontrada para este hóspede/quarto.")
+        raise ValueError(f"{Cores.VERMELHO}Reserva não encontrada para este hóspede/quarto.{Cores.RESET}")
 
     adicional = Adicional(descricao, valor)
     reserva.adicionais.append(adicional)
-    print(f"Adicional '{descricao}' (R${valor}) adicionado à conta com sucesso!")
+    
+    salvar_tudo()
 
 
 # PERSISTÊNCIA DE DADOS:
@@ -286,6 +329,24 @@ def inicializar_sistema():
     """
     global quartos_db, hospedes_db, reservas_db
     quartos_db, hospedes_db, reservas_db = carregar_dados()
+
+    # Dados de Seed:
+    if len(quartos_db) == 0:
+        print(f"{Cores.AMARELO}Sistema vazio detectado. Criando dados de exemplo para teste...{Cores.RESET}")
+        sleep(3)
+        
+        q1 = Quarto(101, "SIMPLES", 1, 100.0)
+        q2 = Quarto(201, "DUPLO", 2, 150.0)
+        q3 = Quarto(401, "LUXO", 2, 300.0)
+        
+        quartos_db.extend([q1, q2, q3])
+        
+        h1 = Hospede("Jayr Alencar", "000.000.000-00", "jayr@ufca.edu.br", "(88) 99999-9999")
+        hospedes_db.append(h1)
+        
+        salvar_tudo()
+            
+        print(f"{Cores.VERDE}Dados de Seed (Quartos e Hóspedes) criados com sucesso!{Cores.RESET}")
 
 def salvar_tudo():
     """
