@@ -7,6 +7,7 @@ from .models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicional, R
 from hotel import services, config
 from datetime import datetime, date
 from time import sleep
+from .config import Cores
 import sys
 import os
 
@@ -63,7 +64,7 @@ def menu_cadastros():
             capacidade = int(input("Capacidade de pessoas: "))
             tarifa_base = float(input("Preço da Diária (R$): "))
             services.cadastrar_quarto(numero, tipo, capacidade, tarifa_base)
-            print("Quarto cadastrado com sucesso!")
+            print(f"{Cores.VERDE}Quarto cadastrado com sucesso!{Cores.RESET}")
             
         elif opcao == "2":
             nome = input("Nome Completo: ")
@@ -71,7 +72,7 @@ def menu_cadastros():
             email = input("E-mail: ")
             telefone = input("Telefone: ")
             services.cadastrar_hospede(nome, documento, email, telefone)
-            print("Hóspede cadastrado com sucesso!")
+            print(f"{Cores.VERDE}Hóspede cadastrado com sucesso!{Cores.RESET}")
             
         elif opcao == "3":
             print("\n--- LISTA DE QUARTOS ---")
@@ -95,6 +96,7 @@ def menu_reservas():
     print("1. Nova Reserva")
     print("2. Buscar Reserva")
     print("3. Cancelar Reserva (Com cálculo de multa)")
+    print("4. Confirmar Reserva")
     print("0. Voltar")
     print("-" * 50)
     
@@ -106,11 +108,11 @@ def menu_reservas():
             numero = int(input("Número do Quarto: "))
             data_entrada = ler_data("Data de Entrada")
             data_saida = ler_data("Data de Saída")
-            capacidade = int(input("Qtd. Hóspedes: "))
+            num_hospedes = int(input("Qtd. Hóspedes: "))
             
-            reserva = services.realizar_reserva(documento, numero, data_entrada, data_saida, capacidade)
+            reserva = services.realizar_reserva(documento, numero, data_entrada, data_saida, num_hospedes)
             total_previsto = services.calcular_total_reserva(reserva)
-            print(f"Reserva realizada com sucesso! Valor previsto: R$ {total_previsto:.2f}")
+            print(f"{Cores.VERDE}Reserva realizada com sucesso!{Cores.RESET} Valor previsto: R$ {total_previsto:.2f}")
             
         elif opcao == "2":
             documento = input("CPF do Hóspede: ")
@@ -120,7 +122,7 @@ def menu_reservas():
                 print(f"\nReserva encontrada: {r.status}")
                 print(f"Período: {r.data_entrada} até {r.data_saida}")
             else:
-                print("Reserva não encontrada.")
+                print(f"{Cores.VERMELHO}Reserva não encontrada.{Cores.RESET}")
 
         elif opcao == "3":
             documento = input("CPF do Hóspede: ")
@@ -128,8 +130,14 @@ def menu_reservas():
             print("Calculando multas...")
             services.cancelar_reserva(documento, numero)
 
+        elif opcao == "4":
+            doc = input("CPF do Hóspede: ")
+            num = int(input("Número do Quarto: "))
+            services.confirmar_reserva(doc, num)
+            pausar()
+
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"{Cores.VERMELHO}Erro: {e}{Cores.RESET}")
         
     if opcao != "0": pausar()
 
@@ -140,6 +148,8 @@ def menu_recepcao():
     print("1. Realizar Check-in (Entrada)")
     print("2. Realizar Check-out (Saída e Pagamento)")
     print("3. Registrar No-Show (Não compareceu)")
+    print("4. Registrar Pagamento (Adiantamento)")
+    print("5. Lançar Consumo Extra (Frigobar/Serviços)")
     print("0. Voltar")
     print("-" * 50)
     
@@ -150,7 +160,7 @@ def menu_recepcao():
             documento = input("CPF do Hóspede: ")
             numero = int(input("Número do Quarto: "))
             services.realizar_checkin(documento, numero)
-            print("Check-in realizado com sucesso! Bem-vindo.")
+            print(f"{Cores.VERDE}Check-in realizado com sucesso! Bem-vindo!{Cores.RESET}")
             
         elif opcao == "2":
             documento = input("CPF do Hóspede: ")
@@ -162,8 +172,34 @@ def menu_recepcao():
             numero = int(input("Número do Quarto: "))
             services.realizar_noshow(documento, numero)
 
+        elif opcao == "4":
+            print("\n--- NOVO PAGAMENTO ---")
+            doc = input("CPF do Hóspede: ")
+            num = int(input("Número do Quarto: "))
+            valor = float(input("Valor (R$): "))
+            print("""Forma: 
+                  [1] Pix 
+                  [2] Dinheiro 
+                  [3] Cartão de Débito 
+                  [4] Cartão de Crédito""")
+            op_forma = input("Escolha: ")
+            forma = "PIX" if op_forma == "1" else "DINHEIRO" if op_forma == "2" else "CARTAO_DEBITO" if op_forma == "3" else "CARTAO_CREDITO"
+            
+            services.registrar_pagamento(doc, num, valor, forma)
+            print(f"{Cores.VERDE}Pagamento registrado com sucesso!{Cores.RESET}")
+
+        elif opcao == "5":
+            print("\n--- NOVO CONSUMO ---")
+            doc = input("CPF do Hóspede: ")
+            num = int(input("Número do Quarto: "))
+            item = input("Descrição do item: ")
+            valor = float(input("Valor (R$): "))
+            
+            services.registrar_adicional(doc, num, item, valor)
+            print(f"{Cores.VERDE}Item adicionado à conta com sucesso!{Cores.RESET}")
+
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"{Cores.VERMELHO}Erro: {e}{Cores.RESET}")
         
     if opcao != "0": pausar()
 
@@ -172,6 +208,7 @@ def menu_relatorios():
     print("RELATÓRIOS")
     print("-" * 50)
     print("1. Ocupação Atual")
+    print("2. Financeiro Completo (ADR/RevPAR)")
     print("0. Voltar")
     print("-" * 50)
     
@@ -180,24 +217,27 @@ def menu_relatorios():
     if opcao == "1":
         services.gerar_relatorio_ocupacao()
         pausar()
+    elif opcao == "2":
+        services.gerar_relatorio_financeiro()
+        pausar()
 
 
 # LOOP PRINCIPAL
 
 def main():
-    # 1. Carrega configurações do JSON
+    # Carrega configurações do JSON:
     config.carregar_configuracoes()
     
-    # 2. Carrega dados salvos (persistência)
+    # Carrega dados salvos:
     services.inicializar_sistema()
     
     while True:
         exibir_cabecalho()
         print("MENU PRINCIPAL")
         print("-" * 50)
-        print("1. Cadastros (Quartos/Hóspedes)")
+        print("1. Cadastros")
         print("2. Reservas")
-        print("3. Recepção (Check-in/Check-out/No-Show)")
+        print("3. Recepção")
         print("4. Relatórios")
         print("0. SAIR e SALVAR")
         print("-" * 50)
@@ -214,11 +254,12 @@ def main():
             menu_relatorios()
         elif opcao == "0":
             print("\nSalvando dados...")
+            sleep(3)
             services.salvar_tudo()
             print("Até logo!")
             break
         else:
-            print("Opção inválida!")
+            print(f"{Cores.VERMELHO}Opção inválida!{Cores.RESET}")
             sleep(1)
 
 if __name__ == "__main__":

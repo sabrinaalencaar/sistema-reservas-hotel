@@ -162,7 +162,7 @@ class Pagamento:
         return {
             "valor": self.valor,
             "forma": self.forma,
-            "data": self.data.isoformat() # Convertemos data para texto
+            "data": self.data.isoformat() # Converte data para texto
         }
 
     @classmethod
@@ -173,7 +173,7 @@ class Pagamento:
         return cls(
             valor = dados["valor"],
             forma = dados["forma"],
-            data = datetime.fromisoformat(dados["data"]) # Convertemos texto para data
+            data = datetime.fromisoformat(dados["data"]) # Converte texto para data
         )
 
 
@@ -321,8 +321,8 @@ class Reserva:
         Converte a reserva em dicionário, salvando apenas os identificadores (IDs) do hóspede e do quarto, e convertendo datas para texto.
         """
         return {
-            "hospede_doc": self.hospede.documento,
-            "quarto_num": self.quarto.numero,
+            "hospede_documento": self.hospede.documento,
+            "quarto_numero": self.quarto.numero,
             "data_entrada": self.data_entrada.isoformat(),
             "data_saida": self.data_saida.isoformat(),
             "num_hospedes": self.num_hospedes,

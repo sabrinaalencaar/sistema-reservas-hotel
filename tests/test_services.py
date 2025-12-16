@@ -201,6 +201,26 @@ def test_gerar_relatorio_ocupacao():
     taxa = services.gerar_relatorio_ocupacao()
     assert taxa == 0.0
 
+def test_gerar_relatorio_financeiro():
+    services.cadastrar_quarto(101, "S", 1, 100.0)
+    services.cadastrar_quarto(102, "S", 1, 100.0)
+    services.cadastrar_hospede("Jayr", "123", "e", "t")
+    
+    r1 = services.realizar_reserva("123", 101, date(2025, 6, 10), date(2025, 6, 11), 1)
+    r1.confirmar()
+    r1.checkin()
+    r1.checkout()
+    
+    r2 = services.realizar_reserva("123", 102, date(2025, 6, 10), date(2025, 6, 11), 1)
+    r2.cancelar()
+    
+    metricas = services.gerar_relatorio_financeiro()
+    
+    assert metricas["receita"] == 110.0
+    assert metricas["adr"] == 110.0
+    assert metricas["revpar"] == 55.0
+    assert metricas["cancelamento"] == 50.0
+
 
 # TESTES DE CÁLCULO DE TARIFAS:
 

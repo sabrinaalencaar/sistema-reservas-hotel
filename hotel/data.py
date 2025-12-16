@@ -6,6 +6,7 @@ from hotel.models import Pessoa, Hospede, Quarto, QuartoLuxo, Pagamento, Adicion
 from datetime import datetime
 from typing import List, Tuple
 from time import sleep
+from .config import Cores
 import json
 import os
 
@@ -49,9 +50,6 @@ def salvar_dados(quartos: List[Quarto], hospedes: List[Hospede], reservas: List[
     """
     Recebe as listas de objetos da memória e salva nos arquivos JSON.
     """
-    print("Salvando dados...")
-    sleep(3)
-
     quartos_dicts = [q.to_dict() for q in quartos]
     _salvar_arquivo(ARQUIVO_QUARTOS, quartos_dicts)
 
@@ -60,8 +58,8 @@ def salvar_dados(quartos: List[Quarto], hospedes: List[Hospede], reservas: List[
 
     reservas_dicts = [r.to_dict() for r in reservas]
     _salvar_arquivo(ARQUIVO_RESERVAS, reservas_dicts)
-    
-    print("Dados salvos com sucesso!")
+
+    print(f"{Cores.VERDE}Dados salvos com sucesso!{Cores.RESET}")
 
 
 # FUNÇÃO PARA CARREGAR TUDO
