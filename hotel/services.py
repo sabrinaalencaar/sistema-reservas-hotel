@@ -325,6 +325,53 @@ def gerar_relatorio_ocupacao():
     
     return taxa
 
+def gerar_relatorio_financeiro():
+    """
+    - ADR (Diária Média): Quanto pagam em média por quarto.
+    - RevPAR: Receita dividida pelo total de quartos (sucesso financeiro).
+    - Taxa de Cancelamento.
+    """
+    total_quartos = len(quartos_db)
+    if total_quartos == 0:
+        print("Nenhum quarto cadastrado. Impossível calcular métricas.")
+        return
+
+    reservas_validas = [r for r in reservas_db if r.status in ["CONFIRMADA", "CHECKIN", "CHECKOUT"]]
+    reservas_canceladas = [r for r in reservas_db if r.status == "CANCELADA"]
+    
+    total_receita = sum(calcular_total_reserva(r) for r in reservas_validas)
+    quartos_vendidos = len(reservas_validas)
+    total_reservas = len(reservas_db)
+    
+    # ADR (Average Daily Rate):
+    adr = total_receita / quartos_vendidos if quartos_vendidos > 0 else 0.0
+    
+    # RevPAR (Revenue Per Available Room):
+    revpar = total_receita / total_quartos
+    
+    # Taxa de Cancelamento:
+    taxa_cancelamento = (len(reservas_canceladas) / total_reservas * 100) if total_reservas > 0 else 0.0
+
+    print("\n" + "="*40)
+    print(f"RELATÓRIO FINANCEIRO DO HOTEL")
+    print("="*40)
+    print(f"Receita Bruta Total:    R$ {total_receita:.2f}")
+    print("-" * 40)
+    print(f"Métricas Financeiras:")
+    print(f"   • ADR (Diária Média):   R$ {adr:.2f}")
+    print(f"   • RevPAR (Eficiência):  R$ {revpar:.2f}")
+    print("-" * 40)
+    print(f"Estatísticas:")
+    print(f"   • Reservas Totais:      {total_reservas}")
+    print(f"   • Cancelamentos:        {len(reservas_canceladas)} ({taxa_cancelamento:.1f}%)")
+    print("="*40 + "\n")
+
+    return {
+        "receita": total_receita,
+        "adr": adr,
+        "revpar": revpar,
+        "cancelamento": taxa_cancelamento
+    }
 
 # CÁLCULO DE TARIFAS
 

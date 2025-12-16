@@ -172,6 +172,7 @@ def menu_relatorios():
     print("RELATÓRIOS")
     print("-" * 50)
     print("1. Ocupação Atual")
+    print("2. Financeiro Completo (ADR/RevPAR)")
     print("0. Voltar")
     print("-" * 50)
     
@@ -180,15 +181,18 @@ def menu_relatorios():
     if opcao == "1":
         services.gerar_relatorio_ocupacao()
         pausar()
+    elif opcao == "2":
+        services.gerar_relatorio_financeiro()
+        pausar()
 
 
 # LOOP PRINCIPAL
 
 def main():
-    # 1. Carrega configurações do JSON
+    # Carrega configurações do JSON:
     config.carregar_configuracoes()
     
-    # 2. Carrega dados salvos (persistência)
+    # Carrega dados salvos:
     services.inicializar_sistema()
     
     while True:
